@@ -1,8 +1,11 @@
+import torch
+import numpy as np
+
 import config
 
 
 def tokens_to_name(x, tokenizer):
-    return "".join([tokenizer.itos[i] for i in x])
+    return "".join([tokenizer.vocab.itos[i] for i in x])
 
 
 def formula_to_list(formula):

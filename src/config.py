@@ -23,3 +23,6 @@ DROPOUT = 0.2
 
 EPOCHS = 10
 LEARNING_RATE = 0.0003
+
+SAVE_MODEL = True
+MODEL_PATH = 'model/model'

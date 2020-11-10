@@ -78,3 +78,6 @@ if __name__ == '__main__':
                         dropout=config.DROPOUT)
     
     train(model, num_epochs=config.EPOCHS, lr=config.LEARNING_RATE)
+
+    if config.SAVE_MODEL:
+        torch.save(model.state_dict(), config.MODEL_PATH)
