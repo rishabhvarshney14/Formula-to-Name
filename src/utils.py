@@ -3,15 +3,17 @@ import numpy as np
 
 import config
 
-
+# Convert list of tokens to names
 def tokens_to_name(x, tokenizer):
     return "".join([tokenizer.vocab.itos[i] for i in x])
 
 
+# Split the formula to the list of elements 'AgNO3' -> ['Ag', 'N', 'O', '3']
 def formula_to_list(formula):
     if formula == "O":
         return ["O"]
 
+    # Wikipedia contains a minor mistake here we correct it here
     if formula == "c(NO2)3":
         formula = "B(NO2)3"
 
@@ -83,9 +85,10 @@ class Batch:
                 self.trg_mask = self.trg_mask.cuda()
 
 
+# Wrap torchtext batch into our own Batch class for pre-processing
 def rebatch(pad_idx, batch):
-    """Wrap torchtext batch into our own Batch class for pre-processing"""
     return Batch(batch.formula, batch.name, pad_idx)
+
 
 class LossCompute:
     """A simple loss compute and train function."""
@@ -97,20 +100,23 @@ class LossCompute:
 
     def __call__(self, x, y, norm):
         x = self.generator(x)
-        loss = self.criterion(x.contiguous().view(-1, x.size(-1)),
-                              y.contiguous().view(-1))
+        loss = self.criterion(
+            x.contiguous().view(-1, x.size(-1)), y.contiguous().view(-1)
+        )
         loss = loss / norm
 
         if self.opt is not None:
-            loss.backward()          
+            loss.backward()
             self.opt.step()
             self.opt.zero_grad()
 
         return loss.data.item() * norm
 
-def predict_output(model, src, src_mask, src_lengths, max_len=30, sos_index=1, eos_index=None):
-    """Greedily decode a sentence."""
 
+# Predicts output by greedily decode a sentence
+def predict_output(
+    model, src, src_mask, src_lengths, max_len=30, sos_index=1, eos_index=None
+):
     with torch.no_grad():
         encoder_hidden, encoder_final = model.encode(src, src_mask, src_lengths)
         prev_y = torch.ones(1, 1).fill_(sos_index).type_as(src)
@@ -123,8 +129,8 @@ def predict_output(model, src, src_mask, src_lengths, max_len=30, sos_index=1, e
     for i in range(max_len):
         with torch.no_grad():
             out, hidden, pre_output = model.decode(
-              encoder_hidden, encoder_final, src_mask,
-              prev_y, trg_mask, hidden)
+                encoder_hidden, encoder_final, src_mask, prev_y, trg_mask, hidden
+            )
 
             # we predict from the pre-output layer, which is
             # a combination of Decoder state, prev emb, and context
@@ -135,12 +141,12 @@ def predict_output(model, src, src_mask, src_lengths, max_len=30, sos_index=1, e
         output.append(next_word)
         prev_y = torch.ones(1, 1).type_as(src).fill_(next_word)
         attention_scores.append(model.decoder.attention.alphas.cpu().numpy())
-    
+
     output = np.array(output)
-        
+
     if eos_index is not None:
-        first_eos = np.where(output==eos_index)[0]
+        first_eos = np.where(output == eos_index)[0]
         if len(first_eos) > 0:
-            output = output[:first_eos[0]]      
-    
+            output = output[: first_eos[0]]
+
     return output, np.concatenate(attention_scores, axis=1)

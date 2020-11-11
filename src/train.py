@@ -1,4 +1,4 @@
-import time
+import argparse
 import math
 
 import torch
@@ -13,71 +13,97 @@ from utils import rebatch, LossCompute
 
 import config
 
-def run_epoch(data_iter, model, loss_compute, print_every=50):
-    """Standard Training and Logging Function"""
-
-    start = time.time()
+# Function for training the model for one epoch
+def run_epoch(data_iter, model, loss_compute, train=True):
     total_tokens = 0
     total_loss = 0
     print_tokens = 0
 
     for i, batch in enumerate(data_iter, 1):
-        
-        out, _, pre_output = model.forward(batch.src, batch.trg,
-                                           batch.src_mask, batch.trg_mask,
-                                           batch.src_lengths, batch.trg_lengths)
+
+        out, _, pre_output = model.forward(
+            batch.src,
+            batch.trg,
+            batch.src_mask,
+            batch.trg_mask,
+            batch.src_lengths,
+            batch.trg_lengths,
+        )
         loss = loss_compute(pre_output, batch.trg_y, batch.nseqs)
         total_loss += loss
         total_tokens += batch.ntokens
-        print_tokens += batch.ntokens
-        
-        if model.training and i % print_every == 0:
-            elapsed = time.time() - start
-            print("Epoch Step: %d Loss: %f Tokens per Sec: %f" %
-                    (i, loss / batch.nseqs, print_tokens / elapsed))
-            start = time.time()
-            print_tokens = 0
 
-    return math.exp(total_loss / float(total_tokens))
+    if train:
+        print(f"Training Loss: {math.exp(total_loss / total_tokens)}")
+    else:
+        print(f"Validation Loss: {math.exp(total_loss / total_tokens)}")
 
-def train(model, num_epochs=10, lr=0.0003):
+
+# Function to train the model
+def train(model, num_epochs=100, lr=0.00001):
     if config.USE_CUDA:
         model.cuda()
 
-    # optionally add label smoothing; see the Annotated Transformer
     criterion = nn.NLLLoss(reduction="sum", ignore_index=PAD_INDEX)
     optim = torch.optim.Adam(model.parameters(), lr=lr)
-    
-    dev_perplexities = []
 
     for epoch in range(num_epochs):
-      
-        print("Epoch", epoch)
+
+        print("Epoch: ", epoch)
         model.train()
-        train_perplexity = run_epoch((rebatch(PAD_INDEX, b) for b in train_iter), 
-                                     model,
-                                     LossCompute(model.generator, criterion, optim))
-        
+        run_epoch(
+            (rebatch(PAD_INDEX, b) for b in train_iter),
+            model,
+            LossCompute(model.generator, criterion, optim),
+        )
+
         model.eval()
         with torch.no_grad():
-            dev_perplexity = run_epoch((rebatch(PAD_INDEX, b) for b in valid_iter), 
-                                       model, 
-                                       LossCompute(model.generator, criterion, None))
-            print("Validation Loss: %f" % dev_perplexity)
-            dev_perplexities.append(dev_perplexity)
-        
-    return dev_perplexities
+            run_epoch(
+                (rebatch(PAD_INDEX, b) for b in valid_iter),
+                model,
+                LossCompute(model.generator, criterion, None),
+                train=False
+            )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--learning_rate",
+        "-lr",
+        type=float,
+        help=f"Learning rate for trainig (default: {config.LEARNING_RATE})",
+        default=config.LEARNING_RATE,
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        help=f"Epochs for trainig (default: {config.EPOCHS})",
+        default=config.EPOCHS,
+    )
+    parser.add_argument(
+        "--save",
+        type=bool,
+        help="Save model after training (default: True)",
+        default=config.SAVE_MODEL,
+    )
+    args = parser.parse_args()
+
     PAD_INDEX = FORMULA_TEXT.vocab.stoi[config.PAD_TOKEN]
     src_vocab = len(FORMULA_TEXT.vocab)
     trg_vocab = len(NAME_TEXT.vocab)
 
-    model = make_model(src_vocab, trg_vocab, emb_size=config.EMB_SIZE, 
-                        hidden_size=config.HIDDEN_SIZE, num_layers=config.NUM_LAYERS,
-                        dropout=config.DROPOUT)
-    
-    train(model, num_epochs=config.EPOCHS, lr=config.LEARNING_RATE)
+    model = make_model(
+        src_vocab,
+        trg_vocab,
+        emb_size=config.EMB_SIZE,
+        hidden_size=config.HIDDEN_SIZE,
+        num_layers=config.NUM_LAYERS,
+        dropout=config.DROPOUT,
+    )
 
-    if config.SAVE_MODEL:
+    train(model, num_epochs=args.epochs, lr=args.learning_rate)
+
+    if args.save:
         torch.save(model.state_dict(), config.MODEL_PATH)

@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
@@ -9,7 +10,7 @@ r = requests.get(config.URL)
 
 soup = BeautifulSoup(r.content, features="lxml")
 
-
+# Remove unwanted characters from the formulas
 def clean_formula(formula):
     formula = str(formula).replace("<td>", "").replace("<sub>", "")
     formula = formula.replace("</td>", "").replace("</sub>", "")
@@ -26,6 +27,7 @@ data = {
     "name": [],
 }
 
+# Scrape the formulas and names
 for table in soup.find_all("table", {"class": "wikitable"}):
     for row in table.find_all("tr"):
         val = row.find_all("td")
@@ -43,6 +45,8 @@ for table in soup.find_all("table", {"class": "wikitable"}):
 
 df = pd.DataFrame(data)
 
-train, val = train_test_split(df, test_size=0.1)
+train, val = train_test_split(df, test_size=0.05)
+
+# Save files without indexs and headings
 train.to_csv(config.TRAIN_PATH, index=False, header=False)
 val.to_csv(config.VALID_PATH, index=False, header=False)

@@ -1,14 +1,16 @@
-import pandas as pd
 import torchtext
-from torchtext.data import Field, BucketIterator, TabularDataset, Iterator
+from torchtext.data import Field, BucketIterator
+from torchtext.data import TabularDataset, Iterator
 
-import config
+import pandas as pd
 
 from utils import formula_to_list
+import config
 
+# Tokenizer for formulas
 formula_tokenize = formula_to_list
 
-
+# Tokenizer for names
 def name_tokenize(name):
     token = []
     for char in name:
@@ -44,9 +46,11 @@ train_data, val_data = TabularDataset.splits(
     fields=data_fields,
 )
 
+# Form vocabulary from the dataset
 FORMULA_TEXT.build_vocab(train_data, val_data)
 NAME_TEXT.build_vocab(train_data, val_data)
 
+# Iterator
 train_iter = BucketIterator(
     train_data,
     batch_size=config.BATCH_SIZE,
@@ -56,12 +60,6 @@ train_iter = BucketIterator(
     repeat=False,
     device=config.DEVICE,
 )
-
 valid_iter = Iterator(
-    val_data, 
-    batch_size=1, 
-    train=False, 
-    sort=False, 
-    repeat=False, 
-    device=config.DEVICE
+    val_data, batch_size=1, train=False, sort=False, repeat=False, device=config.DEVICE
 )
