@@ -12,6 +12,9 @@ from utils import tokens_to_name
 
 import config
 
+torch.manual_seed(config.SEED)
+torch.cuda.manual_seed(config.SEED)
+
 # Converts inputs to appropriate forms as needed for predictions
 def input_to_batch(inp):
     try:

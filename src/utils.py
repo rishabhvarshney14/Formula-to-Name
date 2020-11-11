@@ -3,6 +3,9 @@ import numpy as np
 
 import config
 
+torch.manual_seed(config.SEED)
+torch.cuda.manual_seed(config.SEED)
+
 # Convert list of tokens to names
 def tokens_to_name(x, tokenizer):
     return "".join([tokenizer.vocab.itos[i] for i in x])
@@ -37,7 +40,8 @@ def formula_to_list(formula):
             form.append("".join(ele))
             ele = []
         elif char.isupper() and char in ele:
-            continue
+            form.append("".join(ele))
+            ele = []
         ele.append(char)
 
     if ele and "".join(ele) != form[-1]:

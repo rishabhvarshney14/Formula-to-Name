@@ -1,5 +1,7 @@
 import torch
 
+SEED = 42
+
 # set DEVICE to cuda if GPU is available else to CPU
 USE_CUDA = torch.cuda.is_available()
 DEVICE = torch.device("cuda:0" if USE_CUDA else "cpu")

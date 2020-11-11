@@ -1,3 +1,4 @@
+import torch
 import torchtext
 from torchtext.data import Field, BucketIterator
 from torchtext.data import TabularDataset, Iterator
@@ -6,6 +7,9 @@ import pandas as pd
 
 from utils import formula_to_list
 import config
+
+torch.manual_seed(config.SEED)
+torch.cuda.manual_seed(config.SEED)
 
 # Tokenizer for formulas
 formula_tokenize = formula_to_list

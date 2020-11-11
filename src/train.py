@@ -13,6 +13,9 @@ from utils import rebatch, LossCompute
 
 import config
 
+torch.manual_seed(config.SEED)
+torch.cuda.manual_seed(config.SEED)
+
 # Function for training the model for one epoch
 def run_epoch(data_iter, model, loss_compute, train=True):
     total_tokens = 0
@@ -63,7 +66,7 @@ def train(model, num_epochs=100, lr=0.00001):
                 (rebatch(PAD_INDEX, b) for b in valid_iter),
                 model,
                 LossCompute(model.generator, criterion, None),
-                train=False
+                train=False,
             )
 
 
@@ -88,6 +91,12 @@ if __name__ == "__main__":
         help="Save model after training (default: True)",
         default=config.SAVE_MODEL,
     )
+    parser.add_argument(
+        "--continue_training",
+        type=bool,
+        help="Train a pre-trained model (default: False)",
+        default=False,
+    )
     args = parser.parse_args()
 
     PAD_INDEX = FORMULA_TEXT.vocab.stoi[config.PAD_TOKEN]
@@ -102,6 +111,9 @@ if __name__ == "__main__":
         num_layers=config.NUM_LAYERS,
         dropout=config.DROPOUT,
     )
+
+    if args.continue_training:
+        model.load_state_dict(torch.load(config.MODEL_PATH))
 
     train(model, num_epochs=args.epochs, lr=args.learning_rate)
 
