@@ -48,7 +48,12 @@ model = make_model(
     dropout=config.DROPOUT,
 )
 
-model.load_state_dict(torch.load(config.MODEL_PATH))
+if config.USE_CUDA:
+    model.load_state_dict(torch.load(config.MODEL_PATH))
+else:
+    model.load_state_dict(
+        torch.load(config.MODEL_PATH, map_location=torch.device("cpu"))
+    )
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
