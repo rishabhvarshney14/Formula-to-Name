@@ -10,7 +10,7 @@ from utils import predict_output, tokens_to_name
 from test import input_to_batch, model
 from dataset import FORMULA_TEXT, NAME_TEXT
 
-from elements_list import elements_name
+from element_list import elements_name
 
 import config as config
 
